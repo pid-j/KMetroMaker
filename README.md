@@ -63,7 +63,7 @@ To recolor a river, click two places that have a river while holding down `Alt`+
 
 ### Opening/Loading
 
-To open a file, press `Ctrl`+`O` and open a `.kmm` file. By default, this will automatically detect the version of the same for compatibility with older versions.
+To open a file, press `Ctrl`+`O` and open a `.kmm` file. By default, this will automatically detect the version of the file for compatibility with older versions.
 
 ### Saving
 
