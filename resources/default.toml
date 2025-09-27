@@ -1,0 +1,44 @@
+# font choice from a file on your system, pretty self explanatory.
+font = "resources/Roboto.ttf"
+
+# window size; if you change this, files saved in other sizes may be incompatible.
+windowWidth = 1200
+windowHeight = 800
+
+# grid space, change this if you want placement to be more or less precise.
+gridSpace = 20
+
+# cosmetic change, use this to change stroke thickness of connections
+connectionStroke = 6
+
+# cosmetic change, use this to change stroke thickness of rivers
+riverStroke = 25
+
+# cosmetic change, use this to change size of station and stroke width
+stationSize = 8
+stationStroke = 2
+
+# cosmetic change, use this to change size of text and distance from station
+nameTextSize = 24
+nameDistance = 15
+
+# QOL change, use this if you want to be able to use hex (must start with # to be counted as hex)
+hexCompatible = true
+
+# QOL change, use this for default pallete colors (must start with $ to be counted from the pallete)
+[paletteColors]
+red = 16711680
+orange = 16744448
+yellow = 16776960
+ygreen = 8453888
+green = 65280
+greenblue = 65408
+cyan = 65535
+seablue = 33023
+blue = 255
+purple = 8388863
+pink = 16711935
+white = 16777215
+grey = 8421504
+gray = 8421504
+black = 0
