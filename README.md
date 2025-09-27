@@ -2,7 +2,7 @@
 
 ![KMetroMaker Icon](resources/icon.png)
 
-KMetroMaker is a tool that can be used to create metro maps.
+KMetroMaker is an offline Pygame-based metro map making tool.
 
 ## Prerequisites
 
