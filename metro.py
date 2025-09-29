@@ -87,7 +87,6 @@ class Coordinate:
         return self.get_pos() == other.get_pos()
 
 class TextDirection(Flag):
-    CENTER = auto()
     LEFT = auto()
     RIGHT = auto()
     UP = auto()
@@ -157,9 +156,7 @@ def _text_pos(
         dir: TextDirection) -> pygame.Rect:
     origin: tuple[int, int] = origin.get_pos_whole()
     rect.center = origin
-
-    if TextDirection.CENTER in dir:
-        rect.center = origin
+    
     if TextDirection.LEFT in dir:
         rect.right = origin[0] - textdis * zoom
     if TextDirection.RIGHT in dir:
