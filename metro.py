@@ -11,7 +11,7 @@ except (FileNotFoundError, tomllib.TOMLDecodeError):
         config = tomllib.load(configfile)
 
 class Coordinate:
-    def __init__(self: typing.Self, x: float, y: float) -> None:
+    def __init__(self: typing.Self, x: float = 0, y: float = 0) -> None:
         self.x = x
         self.y = y
     
@@ -25,6 +25,11 @@ class Coordinate:
     def set_pos_whole(self: typing.Self, x: int, y: int) -> None:
         self.x = x / self.root.get_width()
         self.y = y / self.root.get_height()
+
+    def set_pos_whole_cartesian(self: typing.Self, x: int, y: int) -> None:
+        self.set_pos_whole(
+            x + self.root.get_width() // 2,
+            y + self.root.get_height() // 2)
 
     def set_pos_grid(self: typing.Self, gridSize: int) -> None:
         x, y = self.get_pos()
@@ -49,16 +54,40 @@ class Coordinate:
         return (math.floor(self.x * self.root.get_width()) - self.root.get_width() // 2,
                 math.floor(self.y * self.root.get_height()) - self.root.get_height() // 2)
     
+    def copy(self: typing.Self) -> "Coordinate":
+        c = Coordinate(self.x, self.y)
+        c.set_root(self.root)
+        return c
+
     def __str__(self: typing.Self) -> str:
         if self.root:
             pos = self.get_pos_whole()
             return f"({pos[0]}, {pos[1]})"
         return f"({self.x}, {self.y})"
 
+    def __add__(self: typing.Self, other: "Coordinate") -> "Coordinate":
+        c = Coordinate(self.x + other.x, self.y + other.y)
+        if self.root: c.set_root(self.root)
+        elif other.root: c.set_root(other.root)
+        return c
+    
+    def __sub__(self: typing.Self, other: "Coordinate") -> "Coordinate":
+        c = Coordinate(self.x - other.x, self.y - other.y)
+        if self.root: c.set_root(self.root)
+        elif other.root: c.set_root(other.root)
+        return c
+
+    def __mul__(self: typing.Self, other: "Coordinate") -> "Coordinate":
+        c = Coordinate(self.x * other.x, self.y * other.y)
+        if self.root: c.set_root(self.root)
+        elif other.root: c.set_root(other.root)
+        return c
+
     def __eq__(self: typing.Self, other: "Coordinate") -> bool:
         return self.get_pos() == other.get_pos()
 
 class TextDirection(Flag):
+    CENTER = auto()
     LEFT = auto()
     RIGHT = auto()
     UP = auto()
@@ -93,6 +122,15 @@ riverBegin: Coordinate | None = None
 grid: int = config.get("gridSpace", 20)
 running: bool = True
 
+rightDown: bool = False
+rightDownAt: Coordinate = Coordinate()
+rightDownAt.set_pos(0, 0)
+
+zoom: float = 1.0
+pan: Coordinate = Coordinate()
+pan.set_root(window)
+orpan: Coordinate = pan.copy()
+
 stations: list[dict[str, Coordinate]] = []
 connections: list[dict[str, (Coordinate | tuple[int, int, int])]] = []
 rivers: list[dict[str, (Coordinate | tuple[int, int, int])]] = []
@@ -120,14 +158,16 @@ def _text_pos(
     origin: tuple[int, int] = origin.get_pos_whole()
     rect.center = origin
 
+    if TextDirection.CENTER in dir:
+        rect.center = origin
     if TextDirection.LEFT in dir:
-        rect.right = origin[0] - textdis
+        rect.right = origin[0] - textdis * zoom
     if TextDirection.RIGHT in dir:
-        rect.left = origin[0] + textdis
+        rect.left = origin[0] + textdis * zoom
     if TextDirection.UP in dir:
-        rect.bottom = origin[1] - textdis
+        rect.bottom = origin[1] - textdis * zoom
     if TextDirection.DOWN in dir:
-        rect.top = origin[1] + textdis
+        rect.top = origin[1] + textdis * zoom
     return rect
 
 def usr_prompt_color(title: str, prompt: str) -> int | None:
@@ -143,7 +183,6 @@ def usr_prompt_color(title: str, prompt: str) -> int | None:
             tkinter.messagebox.showerror("Invalid color",
                                          "The pallete color entered does not exist.")
             return
-
 
     if not isinstance(color, int):
         if config.get("hexCompatible", True) and color.startswith("#"):
@@ -273,10 +312,11 @@ def usr_change_text_dir_station(*args, **kwargs) -> None:
 
     dir = tkinter.simpledialog.askstring(
         "Enter new station text direction",
-        "What is the new station text direction? (blank to cancel, any combination of LRUD is valid)") 
+        "What is the new station text direction? (blank to cancel, any combination of CLRUD is valid)") 
 
     if not dir: return
     dirFlag = TextDirection(0)
+    if "C" in dir: dirFlag |= TextDirection.CENTER
     if "L" in dir: dirFlag |= TextDirection.LEFT
     if "R" in dir: dirFlag |= TextDirection.RIGHT
     if "U" in dir: dirFlag |= TextDirection.UP
@@ -288,21 +328,28 @@ def usr_change_text_dir_station(*args, **kwargs) -> None:
     stations[station]["dir"] = dirFlag
 
 def draw_station(station: dict[str, Coordinate]) -> None:
+    where = station["where"]
+    cartesian = where.get_pos_whole_cartesian()
+    where = Coordinate()
+    where.set_root(window)
+    where.set_pos_whole_cartesian(cartesian[0] * zoom, cartesian[1] * zoom)
+    where += pan * Coordinate(zoom, zoom)
+
     pygame.draw.circle(
         window, (0, 0, 0),
-        station["where"].get_pos_whole(),
-        config.get("stationStroke", 2) + config.get("stationSize", 8))
+        where.get_pos_whole(),
+        zoom * (config.get("stationStroke", 2) + config.get("stationSize", 8)))
     
     pygame.draw.circle(
         window, (255, 255, 255),
-        station["where"].get_pos_whole(),
-        config.get("stationSize", 8))
+        where.get_pos_whole(),
+        zoom * config.get("stationSize", 8))
 
-    rect: pygame.Rect = lta.get_rect(station["name"])
-    rect = _text_pos(station["where"], rect, station["dir"])
+    rect: pygame.Rect = lta.get_rect(station["name"], size=24 * zoom)
+    rect = _text_pos(where, rect, station["dir"])
 
-    lta.render_to(window, rect,
-                  station["name"], fgcolor=(0, 0, 0))
+    lta.render_to(window, rect, station["name"],
+                  fgcolor=(0, 0, 0), size=24 * zoom)
 
 def add_connection(termini: tuple[Coordinate], color: tuple[int, int, int]) -> None:
     if termini[0] == termini[1]: return
@@ -418,9 +465,6 @@ def draw_connection(connection: dict[str, Coordinate | tuple[int, int, int]], ci
         idx = 0
 
     for termIdx in range(len(connection["termini"]) - 1):
-        t1 = list(connection["termini"][termIdx].get_pos_whole())
-        t2 = list(connection["termini"][termIdx + 1].get_pos_whole())
-
         t1_c = list(connection["termini"][termIdx].get_pos_whole_cartesian())
         t2_c = list(connection["termini"][termIdx + 1].get_pos_whole_cartesian())
 
@@ -430,17 +474,29 @@ def draw_connection(connection: dict[str, Coordinate | tuple[int, int, int]], ci
 
         su = idx - (( len(connections) - 1 ) / 2)
 
-        t1[0] += math.floor(config.get("connectionStroke", 6) * su * si + 0.5)
-        t2[0] += math.floor(config.get("connectionStroke", 6) * su * si + 0.5)
+        t1coord = Coordinate()
+        t1coord.set_root(window)
+        t1coord.set_pos_whole_cartesian(t1_c[0] * zoom, t1_c[1] * zoom)
+        t1coord += pan * Coordinate(zoom, zoom)
 
-        t1[1] += math.floor(config.get("connectionStroke", 6) * su * co + 0.5)
-        t2[1] += math.floor(config.get("connectionStroke", 6) * su * co + 0.5)
+        t2coord = Coordinate()
+        t2coord.set_root(window)
+        t2coord.set_pos_whole_cartesian(t2_c[0] * zoom, t2_c[1] * zoom)
+        t2coord += pan * Coordinate(zoom, zoom)
+
+        offset = Coordinate()
+        offset.set_root(window)
+        offset.set_pos_whole(
+            math.floor(config.get("connectionStroke", 6) * su * si + 0.5),
+            math.floor(config.get("connectionStroke", 6) * su * co + 0.5)
+        )
+
+        t1 = (t1coord + offset).get_pos_whole()
+        t2 = (t2coord + offset).get_pos_whole()
 
         pygame.draw.line(
-            window, connection["color"],
-            t1,
-            t2, 
-            config.get("connectionStroke", 6)
+            window, connection["color"], t1, t2, 
+            pygame.math.clamp(math.floor(config.get("connectionStroke", 6) * zoom), 1, 10000)
         )
 
 def add_river(termini: tuple[Coordinate], color: tuple[int, int, int]) -> None:
@@ -545,21 +601,38 @@ def usr_recolor_river(*args, **kwargs) -> None:
 
 def draw_river(river: dict[str, Coordinate | tuple[int, int, int]]) -> None:
     for termIdx in range(len(river["termini"]) - 1):
+        t1 = river["termini"][termIdx]
+        t2 = river["termini"][termIdx + 1]
+
+        t1_c = list(t1.get_pos_whole_cartesian())
+        t2_c = list(t2.get_pos_whole_cartesian())
+
+        t1coord = Coordinate()
+        t1coord.set_root(window)
+        t1coord.set_pos_whole_cartesian(t1_c[0] * zoom, t1_c[1] * zoom)
+        t1coord += pan * Coordinate(zoom, zoom)
+
+        t2coord = Coordinate()
+        t2coord.set_root(window)
+        t2coord.set_pos_whole_cartesian(t2_c[0] * zoom, t2_c[1] * zoom)
+        t2coord += pan * Coordinate(zoom, zoom)
+
+        t1 = t1coord.get_pos_whole()
+        t2 = t2coord.get_pos_whole()
+
+        riverStroke = pygame.math.clamp(math.floor(config.get("riverStroke", 25) * zoom), 1, 1000)
+
         pygame.draw.line(
-            window, river["color"],
-            river["termini"][termIdx].get_pos_whole(),
-            river["termini"][termIdx + 1].get_pos_whole(), 
-            config.get("riverStroke", 25)
+            window, river["color"], t1, t2,
+            riverStroke
         )
         pygame.draw.circle(
-            window, river["color"],
-            river["termini"][termIdx].get_pos_whole(),
-            config.get("riverStroke", 25) / 2
+            window, river["color"], t1,
+            riverStroke / 2
         )
         pygame.draw.circle(
-            window, river["color"],
-            river["termini"][termIdx + 1].get_pos_whole(),
-            config.get("riverStroke", 25) / 2
+            window, river["color"], t2,
+            riverStroke / 2
         )
 
 def saveas_file() -> None:
@@ -768,6 +841,9 @@ def open_file() -> None:
         tkinter.messagebox.showerror("Invalid file",
                                      "The file selected is not a valid KMetroMaker file.")
         return
+    
+    orpan.set_pos(0, 0)
+    pan.set_pos(0, 0)
 
 def export_image_file() -> None:
     filename = tkinter.filedialog.asksaveasfilename(
@@ -811,7 +887,7 @@ def handle_vkeys(keys: pygame.key.ScancodeWrapper) -> None:
     usr_add_river()
     return
 
-def handle_keys_mouse(keys: pygame.key.ScancodeWrapper) -> None:
+def handle_keys_left(keys: pygame.key.ScancodeWrapper) -> None:
     if keys[pygame.K_LALT] or keys[pygame.K_RALT]:
         if keys[pygame.K_c]:
             handle_ckeys(keys)
@@ -822,8 +898,13 @@ def handle_keys_mouse(keys: pygame.key.ScancodeWrapper) -> None:
         if keys[pygame.K_v]:
             handle_vkeys(keys)
             return  
-    
+
+def scroll_right(mousePos: Coordinate) -> None:
+    global pan
+    pan = orpan + (mousePos - rightDownAt)
+   
 def handle_keys_keyboard(keys: pygame.key.ScancodeWrapper) -> None:
+    global zoom
     if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
         if keys[pygame.K_s]:
             saveas_file()
@@ -834,21 +915,75 @@ def handle_keys_keyboard(keys: pygame.key.ScancodeWrapper) -> None:
         if keys[pygame.K_e]:
             export_image_file()
             return
+        if keys[pygame.K_MINUS]:
+            zoom /= 2
+            if zoom < 0.03125: zoom = 0.03125
+            return
+        if keys[pygame.K_PLUS] or (
+            (keys[pygame.K_EQUALS] and 
+                (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
+            )
+        ):
+            zoom *= 2
+            if zoom > 32: zoom = 32
+            return
+        if keys[pygame.K_0]:
+            zoom = 1
+            pan.set_pos(0, 0)
+            orpan.set_pos(0, 0)
+            return
+        return
     
 def handle_events_and_keys() -> None:
     global running
-    keys = pygame.key.get_pressed()
+    global rightDown
+    global rightDownAt
+    global orpan
 
-    for event in pygame.event.get():
+    get = pygame.event.get()
+    keys = pygame.key.get_pressed()
+    mousebuttons = pygame.mouse.get_pressed()
+
+    mouseAt = Coordinate()
+    mouseAt.set_root(window)
+    mouseAt.set_pos_whole(
+        pygame.mouse.get_pos()[0],
+        pygame.mouse.get_pos()[1]
+    )
+
+    for event in get:
         if event.type == pygame.QUIT:
             running = False
             return
+        
+        if event.type == pygame.KEYDOWN:
+            handle_keys_keyboard(keys)
+            continue
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if mousebuttons[0]: continue
+            if mousebuttons[2]:
+                orpan = pan.copy()
+                rightDownAt = mouseAt.copy()
+                rightDown = True
+                continue
+            continue
 
         if event.type == pygame.MOUSEBUTTONUP:
-            handle_keys_mouse(keys)
+            handle_keys_left(keys)
+            if mousebuttons[2]:
+                orpan = pan.copy()
+                rightDownAt = None
+                rightDown = False
+                continue
             continue
-    
-    handle_keys_keyboard(keys)
+
+        if event.type == pygame.MOUSEMOTION:
+            if mousebuttons[0]: continue
+            if mousebuttons[2]:
+                scroll_right(mouseAt)
+                continue
+            continue
 
 def main() -> None:
     while running:
