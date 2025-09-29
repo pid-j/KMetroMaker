@@ -2,7 +2,7 @@
 
 ![KMetroMaker Icon](resources/icon.png)
 
-KMetroMaker is an offline Pygame-based metro map making tool.
+KMetroMaker is a tool that can be used to create metro maps.
 
 ## Prerequisites
 
@@ -63,7 +63,7 @@ To recolor a river, click two places that have a river while holding down `Alt`+
 
 ### Opening/Loading
 
-To open a file, press `Ctrl`+`O` and open a `.kmm` file. By default, this will automatically detect the version of the file for compatibility with older versions.
+To open a file, press `Ctrl`+`O` and open a `.kmm` file. By default, this will automatically detect the version of the same for compatibility with older versions.
 
 ### Saving
 
@@ -77,3 +77,7 @@ To save a file, press `Ctrl`+`S` and save to a `.kmm` file. By default, this wil
 ### Exporting
 
 To export your map to a PNG file, press `Ctrl`+`E` and save to a `.png` file.
+
+### Zooming and Panning
+
+To zoom in, use `Ctrl`+`+`. To zoom out, use `Ctrl`+`-`. To pan, hold right click and drag, If you don't have a mouse and can't right click, tough luck. To reset zoom and pan, use `Ctrl`+`0`.
