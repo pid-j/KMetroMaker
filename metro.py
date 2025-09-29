@@ -313,7 +313,6 @@ def usr_change_text_dir_station(*args, **kwargs) -> None:
 
     if not dir: return
     dirFlag = TextDirection(0)
-    if "C" in dir: dirFlag |= TextDirection.CENTER
     if "L" in dir: dirFlag |= TextDirection.LEFT
     if "R" in dir: dirFlag |= TextDirection.RIGHT
     if "U" in dir: dirFlag |= TextDirection.UP
