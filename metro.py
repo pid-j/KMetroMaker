@@ -309,7 +309,7 @@ def usr_change_text_dir_station(*args, **kwargs) -> None:
 
     dir = tkinter.simpledialog.askstring(
         "Enter new station text direction",
-        "What is the new station text direction? (blank to cancel, any combination of CLRUD is valid)") 
+        "What is the new station text direction? (blank to cancel, any combination of LRUD is valid)") 
 
     if not dir: return
     dirFlag = TextDirection(0)
