@@ -642,12 +642,15 @@ def draw_river(river: dict[str, Coordinate | tuple[int, int, int]]) -> None:
 
 def extreme_connect() -> None:
     global connections
+    connections.clear()
+
     for i, s1 in enumerate(stations):
         for j, s2 in enumerate(stations):
             if s1 == s2: continue
             termini = (s1["where"], s2["where"])
             if find_connection(termini) >= 0: continue
-            add_connection(termini, (j % 256, 0, i % 256))
+            add_connection(termini, (len(stations) * j // 255, 0,
+                                     len(stations) * i // 255))
 
 def usr_extreme_connect() -> None:
     result = tkinter.messagebox.askyesno(
