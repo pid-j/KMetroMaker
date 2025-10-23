@@ -1,6 +1,6 @@
 import pygame, math, typing, tkinter.messagebox
 import tkinter.simpledialog, tkinter.filedialog
-import tomllib
+import tomllib, random
 from enum import Flag, auto
 
 try:
@@ -139,6 +139,11 @@ def int2col(color: int) -> tuple[int, int, int]:
 
 def col2int(color: tuple[int, int, int]) -> int:
     return color[0] * 65536 + color[1] * 256 + color[2]
+
+def _random_color() -> tuple[int, int, int]:
+    return (random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(0, 255))
 
 def _find_conmap(termini: tuple[Coordinate]) -> int:
     def _t(connection: dict[str, Coordinate]) -> bool:
@@ -644,13 +649,12 @@ def extreme_connect() -> None:
     global connections
     connections.clear()
 
-    for i, s1 in enumerate(stations):
-        for j, s2 in enumerate(stations):
+    for s1 in stations:
+        for s2 in stations:
             if s1 == s2: continue
             termini = (s1["where"], s2["where"])
             if find_connection(termini) >= 0: continue
-            add_connection(termini, (len(stations) * j // 255, 0,
-                                     len(stations) * i // 255))
+            add_connection(termini, _random_color())
 
 def usr_extreme_connect() -> None:
     result = tkinter.messagebox.askyesno(
@@ -925,9 +929,6 @@ def handle_vkeys(keys: pygame.key.ScancodeWrapper) -> None:
 
 def handle_keys_left(keys: pygame.key.ScancodeWrapper) -> None:
     if keys[pygame.K_LALT] or keys[pygame.K_RALT]:
-        if keys[pygame.K_p]:
-            usr_extreme_connect()
-            return
         if keys[pygame.K_c]:
             handle_ckeys(keys)
             return
@@ -945,6 +946,9 @@ def scroll_right(mousePos: Coordinate) -> None:
 def handle_keys_keyboard(keys: pygame.key.ScancodeWrapper) -> None:
     global zoom
     if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+        if keys[pygame.K_COMMA]:
+            usr_extreme_connect()
+            return
         if keys[pygame.K_s]:
             saveas_file()
             return
