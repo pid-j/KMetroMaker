@@ -54,8 +54,8 @@ class Coordinate:
         return (math.floor(self.x * self.root.get_width()) - self.root.get_width() // 2,
                 math.floor(self.y * self.root.get_height()) - self.root.get_height() // 2)
     
-    def copy(self: typing.Self) -> "Coordinate":
-        c = Coordinate(self.x, self.y)
+    def copy(self: typing.Self, mul: int | float = 1) -> "Coordinate":
+        c = Coordinate(self.x * mul, self.y * mul)
         c.set_root(self.root)
         return c
 
@@ -208,6 +208,15 @@ def usr_coord_mouse() -> Coordinate:
         pygame.mouse.get_pos()[0],
         pygame.mouse.get_pos()[1]
     )
+
+    where_c = list(where.get_pos_whole_cartesian())
+    where_c[0] /= zoom
+    where_c[1] /= zoom
+
+    pan_c = pan.copy(zoom)
+
+    where.set_pos_whole_cartesian(where_c[0] + pan_c.x, where_c[1] + pan_c.y)
+
     where.set_pos_grid(grid)
     return where
 
@@ -631,6 +640,34 @@ def draw_river(river: dict[str, Coordinate | tuple[int, int, int]]) -> None:
             riverStroke / 2
         )
 
+def extreme_connect() -> None:
+    global connections
+    for i, s1 in enumerate(stations):
+        for j, s2 in enumerate(stations):
+            if s1 == s2: continue
+            termini = (s1["where"], s2["where"])
+            if find_connection(termini) >= 0: continue
+            add_connection(termini, (j * 65536 % 16777216, 0, i % 256))
+
+def usr_extreme_connect() -> None:
+    result = tkinter.messagebox.askyesno(
+        "Extreme connect",
+        "Are you sure you want to connect ALL stations to each other?",
+        icon=tkinter.messagebox.WARNING
+    )
+    
+    if not result: return
+
+    result = tkinter.messagebox.askyesno(
+        "Are you REALLY SURE?",
+        "This WILL connect all stations to each other and ruin your work!",
+        icon=tkinter.messagebox.WARNING
+    )
+
+    if not result: return
+
+    extreme_connect()
+
 def saveas_file() -> None:
     filename = tkinter.filedialog.asksaveasfilename(
         filetypes=[("KMetroMaker files", "*.kmm")])
@@ -958,25 +995,21 @@ def handle_events_and_keys() -> None:
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if mousebuttons[0]: continue
-            if mousebuttons[2]:
-                orpan = pan.copy()
-                rightDownAt = mouseAt.copy()
-                rightDown = True
-                continue
+            orpan = pan.copy()
+            rightDownAt = mouseAt.copy()
+            rightDown = True
             continue
 
         if event.type == pygame.MOUSEBUTTONUP:
             handle_keys_left(keys)
-            if mousebuttons[2]:
-                orpan = pan.copy()
-                rightDownAt = None
-                rightDown = False
-                continue
+            orpan = pan.copy()
+            rightDownAt = None
+            rightDown = False
             continue
 
         if event.type == pygame.MOUSEMOTION:
             if mousebuttons[0]: continue
-            if mousebuttons[2]:
+            if mousebuttons[2] and rightDown:
                 scroll_right(mouseAt)
                 continue
             continue
