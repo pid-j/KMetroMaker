@@ -922,7 +922,7 @@ def handle_vkeys(keys: pygame.key.ScancodeWrapper) -> None:
 
 def handle_keys_left(keys: pygame.key.ScancodeWrapper) -> None:
     if keys[pygame.K_LALT] or keys[pygame.K_RALT]:
-        if keys[pygame.K_BACKQUOTE]:
+        if keys[pygame.K_p]:
             usr_extreme_connect()
             return
         if keys[pygame.K_c]:
