@@ -647,7 +647,7 @@ def extreme_connect() -> None:
             if s1 == s2: continue
             termini = (s1["where"], s2["where"])
             if find_connection(termini) >= 0: continue
-            add_connection(termini, (j * 65536 % 16777216, 0, i % 256))
+            add_connection(termini, (j % 256, 0, i % 256))
 
 def usr_extreme_connect() -> None:
     result = tkinter.messagebox.askyesno(
