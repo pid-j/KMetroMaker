@@ -1,13 +1,17 @@
 import pygame, math, typing, tkinter.messagebox
 import tkinter.simpledialog, tkinter.filedialog
 import tomllib, random
+from pathlib import Path
 from enum import Flag, auto
 
+basePath = Path(__file__).parent.resolve()
+resourcesPath = basePath.joinpath("resources").resolve()
+
 try:
-    with open("config.toml", "rb") as configfile:
+    with open(str(basePath.joinpath("config.toml")), "rb") as configfile:
         config = tomllib.load(configfile)
 except (FileNotFoundError, tomllib.TOMLDecodeError):
-    with open("resources/default.toml", "rb") as configfile:
+    with open(str(resourcesPath.joinpath("default.toml")), "rb") as configfile:
         config = tomllib.load(configfile)
 
 class Coordinate:
@@ -54,7 +58,13 @@ class Coordinate:
         return (math.floor(self.x * self.root.get_width()) - self.root.get_width() // 2,
                 math.floor(self.y * self.root.get_height()) - self.root.get_height() // 2)
     
-    def copy(self: typing.Self, mul: int | float = 1) -> "Coordinate":
+    def copy(self: typing.Self, mul: int | float = 1, inCartesian: bool = False) -> "Coordinate":
+        if inCartesian:
+            c = Coordinate()
+            c.set_root(self.root)
+            c.set_pos((self.x - 0.5) * mul + 0.5,
+                      (self.y - 0.5) * mul + 0.5)
+            return c
         c = Coordinate(self.x * mul, self.y * mul)
         c.set_root(self.root)
         return c
@@ -97,10 +107,12 @@ pygame.init()
 window = pygame.display.set_mode((
     config.get("windowWidth", 1200),
     config.get("windowHeight", 800)))
-icon = pygame.image.load("resources/icon.png")
+icon = pygame.image.load(str(
+    resourcesPath.joinpath("icon.png")))
 icon = pygame.transform.scale(icon, (512, 512))
 
 pygame.display.set_caption("KMetroMaker")
+pygame.display.set_icon(icon)
 
 rect = icon.get_rect()
 rect.center = window.get_rect().center
@@ -111,8 +123,9 @@ window.blit(icon, rect)
 pygame.display.flip()
 pygame.time.delay(2000)
 
-lta = pygame.freetype.Font(config.get("font", "resources/Roboto.png"),
-                           config.get("nameTextSize", 24))
+font = pygame.freetype.Font(config.get("font", str(
+    resourcesPath.joinpath("Roboto.ttf")
+)), config.get("nameTextSize", 24))
 textdis = config.get("nameDistance", 15)
 stationSel: bool = False
 terminus: int = -1
@@ -214,13 +227,10 @@ def usr_coord_mouse() -> Coordinate:
         pygame.mouse.get_pos()[1]
     )
 
-    where_c = list(where.get_pos_whole_cartesian())
-    where_c[0] /= zoom
-    where_c[1] /= zoom
-
-    pan_c = pan.copy(zoom)
-
-    where.set_pos_whole_cartesian(where_c[0] + pan_c.x, where_c[1] + pan_c.y)
+    print(where)
+    where = where.copy(1 / zoom, True)
+    where -= pan.copy()
+    print(where)
 
     where.set_pos_grid(grid)
     return where
@@ -355,10 +365,10 @@ def draw_station(station: dict[str, Coordinate]) -> None:
         where.get_pos_whole(),
         zoom * config.get("stationSize", 8))
 
-    rect: pygame.Rect = lta.get_rect(station["name"], size=24 * zoom)
+    rect: pygame.Rect = font.get_rect(station["name"], size=24 * zoom)
     rect = _text_pos(where, rect, station["dir"])
 
-    lta.render_to(window, rect, station["name"],
+    font.render_to(window, rect, station["name"],
                   fgcolor=(0, 0, 0), size=24 * zoom)
 
 def add_connection(termini: tuple[Coordinate], color: tuple[int, int, int]) -> None:
