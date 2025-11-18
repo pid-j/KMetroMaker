@@ -1,5 +1,5 @@
 # font choice from a file on your system, pretty self explanatory.
-font = "resources/Roboto.ttf"
+font = "resources\\Roboto.ttf"
 
 # window size; if you change this, files saved in other sizes may be incompatible.
 windowWidth = 1200
