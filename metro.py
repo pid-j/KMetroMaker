@@ -185,24 +185,18 @@ def _text_pos(
         rect.top = origin[1] + textdis * zoom
     return rect
 
-def usr_prompt_color(title: str, prompt: str) -> int | None:
-    color = tkinter.simpledialog.askstring(title, prompt)
-    
-    if color is None: return
-    
+def _parse_usr_color(color: str | int) -> int:
     if "paletteColors" in config.keys() and color.startswith("$"):
         paletteColor = config["paletteColors"].get(color[1:], None)
         if paletteColor is not None:
             color = int(paletteColor)
         else:
-            tkinter.messagebox.showerror("Invalid color",
-                                         "The pallete color entered does not exist.")
-            return
+            return -1
 
     if not isinstance(color, int):
-        if config.get("hexCompatible", True) and color.startswith("#"):
+        if color.startswith("#"):
             try:
-                color = int(color[1:], 16)
+                color = int(color.strip("#"), 16)
             except ValueError:
                 pass
 
@@ -210,12 +204,29 @@ def usr_prompt_color(title: str, prompt: str) -> int | None:
         try:
             color = int(color)
         except ValueError:
-            tkinter.messagebox.showerror("Invalid color",
-                                         "The color entered is invalid.")
-            return
-
+            return -2
+        
     if color < 0: color = 0
     if color > 0xFFFFFF: color = 0xFFFFFF
+    
+    return color
+
+def usr_prompt_color(title: str, prompt: str) -> int | None:
+    color = tkinter.simpledialog.askstring(title, prompt)
+    
+    if color is None: return
+
+    color = _parse_usr_color(color)
+
+    if color == -1:
+        tkinter.messagebox.showerror("Invalid color",
+                                         "The pallete color entered does not exist.")
+        return
+
+    if color == -2:
+        tkinter.messagebox.showerror("Invalid color",
+                                         "The color entered is invalid.")
+        return
 
     return color
 
@@ -227,10 +238,8 @@ def usr_coord_mouse() -> Coordinate:
         pygame.mouse.get_pos()[1]
     )
 
-    print(where)
     where = where.copy(1 / zoom, True)
     where -= pan.copy()
-    print(where)
 
     where.set_pos_grid(grid)
     return where
@@ -515,8 +524,9 @@ def draw_connection(connection: dict[str, Coordinate | tuple[int, int, int]], ci
         t2 = (t2coord + offset).get_pos_whole()
 
         pygame.draw.line(
-            window, connection["color"], t1, t2, 
-            pygame.math.clamp(math.floor(config.get("connectionStroke", 6) * zoom), 1, 10000)
+            window, _parse_usr_color(config.get("connectionBorderColor", "#ffffff")), t1, t2, 
+            pygame.math.clamp(math.floor(config.get("connectionStroke", 6) * zoom) + 
+                              config.get("connectionBorderStroke", 3) * 2, 1, 10000)
         )
 
 def add_river(termini: tuple[Coordinate], color: tuple[int, int, int]) -> None:

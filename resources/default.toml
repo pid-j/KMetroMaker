@@ -22,9 +22,6 @@ stationStroke = 2
 nameTextSize = 24
 nameDistance = 15
 
-# QOL change, use this if you want to be able to use hex (must start with # to be counted as hex)
-hexCompatible = true
-
 # QOL change, use this for default pallete colors (must start with $ to be counted from the pallete)
 [paletteColors]
 red = 16711680
