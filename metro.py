@@ -524,9 +524,8 @@ def draw_connection(connection: dict[str, Coordinate | tuple[int, int, int]], ci
         t2 = (t2coord + offset).get_pos_whole()
 
         pygame.draw.line(
-            window, _parse_usr_color(config.get("connectionBorderColor", "#ffffff")), t1, t2, 
-            pygame.math.clamp(math.floor(config.get("connectionStroke", 6) * zoom) + 
-                              config.get("connectionBorderStroke", 3) * 2, 1, 10000)
+            window, connection["color"], t1, t2, 
+            pygame.math.clamp(math.floor(config.get("connectionStroke", 6) * zoom), 1, 10000)
         )
 
 def add_river(termini: tuple[Coordinate], color: tuple[int, int, int]) -> None:
